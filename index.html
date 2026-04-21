@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Faculty Review — Excellence Institute</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="logo" href="index.html">
+        <img src="logo.png" alt="Excellence Institute" class="logo-img" />
+        <div class="logo-text">
+          <span class="logo-title">Excellence Institute</span>
+          <span class="logo-sub">Faculty Review Portal</span>
+        </div>
+      </a>
+      <a href="admin.html" class="btn btn-outline btn-sm">Admin Login</a>
+    </div>
+  </header>
+
+  <main class="main-container">
+
+    <!-- Hero -->
+    <section class="hero" id="hero-section">
+      <div class="hero-text">
+        <h1>Share Your Honest Feedback</h1>
+        <p>Your identity is completely anonymous. Help improve teaching quality at Excellence Institute by reviewing your faculty members.</p>
+        <button class="btn btn-primary btn-lg" id="start-btn" onclick="showReviewForm()">Write a Review</button>
+      </div>
+      <div class="hero-badge">
+        <span>🛡️</span>
+        <span>100% Anonymous — No personal data collected</span>
+      </div>
+    </section>
+
+    <!-- No Active Sessions -->
+    <section class="card info-card hidden" id="no-session-section">
+      <div class="info-content">
+        <div class="info-icon">📋</div>
+        <h2>No Active Review Sessions</h2>
+        <p>There are no open review sessions right now. Please check back later or contact your administrator.</p>
+      </div>
+    </section>
+
+    <!-- Review Form -->
+    <section class="card review-card hidden" id="review-section">
+      <h2 class="section-title">Submit a Faculty Review</h2>
+      <p class="anon-notice">🛡️ Your review is completely anonymous — no personal data is collected or stored.</p>
+
+      <form id="review-form" novalidate>
+
+        <!-- Session Selector -->
+        <div class="form-group" id="session-group">
+          <label for="session-select">Review Session <span class="required">*</span></label>
+          <select id="session-select" required>
+            <option value="">— Select a session —</option>
+          </select>
+          <span class="field-error hidden" id="session-error">Please select a session.</span>
+        </div>
+
+        <!-- Session Info Banner (shown when session has dedicated faculty) -->
+        <div class="session-banner hidden" id="session-banner">
+          <span class="session-banner-label">Session:</span>
+          <span id="session-banner-name"></span>
+          <span class="session-banner-sep">·</span>
+          <span class="session-banner-label">Faculty:</span>
+          <span id="session-banner-faculty"></span>
+        </div>
+
+        <!-- Class Selector -->
+        <div class="form-group">
+          <label for="class-select">Your Class <span class="required">*</span></label>
+          <select id="class-select" required>
+            <option value="">— Select your class —</option>
+            <optgroup label="Primary School">
+              <option>1st</option>
+              <option>2nd</option>
+              <option>3rd</option>
+              <option>4th</option>
+              <option>5th</option>
+            </optgroup>
+            <optgroup label="Middle School">
+              <option>6th</option>
+              <option>7th</option>
+              <option>8th</option>
+            </optgroup>
+            <optgroup label="Secondary School">
+              <option>9th</option>
+              <option>10th</option>
+            </optgroup>
+            <optgroup label="Higher Secondary — +1">
+              <option>+1 Science</option>
+              <option>+1 Commerce</option>
+              <option>+1 Arts</option>
+            </optgroup>
+            <optgroup label="Higher Secondary — +2">
+              <option>+2 Science</option>
+              <option>+2 Commerce</option>
+              <option>+2 Arts</option>
+            </optgroup>
+            <optgroup label="Courses">
+              <option>Internship Course</option>
+              <option>Computer Course</option>
+            </optgroup>
+          </select>
+          <span class="field-error hidden" id="class-error">Please select your class.</span>
+        </div>
+
+        <!-- Faculty Selector (hidden when session has dedicated faculty) -->
+        <div class="form-group" id="faculty-group">
+          <label for="faculty-select">Faculty Member <span class="required">*</span></label>
+          <select id="faculty-select" required>
+            <option value="">— Select a faculty member —</option>
+          </select>
+          <span class="field-error hidden" id="faculty-error">Please select a faculty member.</span>
+        </div>
+
+        <!-- Teaching Style -->
+        <div class="form-group">
+          <label>Teaching Style Rating <span class="required">*</span></label>
+          <p class="label-hint">Clarity, engagement, and communication in lectures</p>
+          <div class="star-group" id="style-stars">
+            <button type="button" class="star" data-value="1" title="1 — Poor">★</button>
+            <button type="button" class="star" data-value="2" title="2 — Fair">★</button>
+            <button type="button" class="star" data-value="3" title="3 — Good">★</button>
+            <button type="button" class="star" data-value="4" title="4 — Very Good">★</button>
+            <button type="button" class="star" data-value="5" title="5 — Excellent">★</button>
+          </div>
+          <span class="star-label" id="style-label"></span>
+          <span class="field-error hidden" id="style-error">Please rate the teaching style.</span>
+        </div>
+
+        <!-- Teaching Methods -->
+        <div class="form-group">
+          <label>Teaching Methods Rating <span class="required">*</span></label>
+          <p class="label-hint">Use of examples, practical activities, and student involvement</p>
+          <div class="star-group" id="methods-stars">
+            <button type="button" class="star" data-value="1" title="1 — Poor">★</button>
+            <button type="button" class="star" data-value="2" title="2 — Fair">★</button>
+            <button type="button" class="star" data-value="3" title="3 — Good">★</button>
+            <button type="button" class="star" data-value="4" title="4 — Very Good">★</button>
+            <button type="button" class="star" data-value="5" title="5 — Excellent">★</button>
+          </div>
+          <span class="star-label" id="methods-label"></span>
+          <span class="field-error hidden" id="methods-error">Please rate the teaching methods.</span>
+        </div>
+
+        <!-- Comments -->
+        <div class="form-group">
+          <label for="review-comment">Your Review <span class="required">*</span></label>
+          <p class="label-hint">Describe the faculty member's teaching style and methods in detail</p>
+          <textarea
+            id="review-comment"
+            rows="5"
+            placeholder="Share your experience — what worked well, what could be improved, how the faculty engages students..."
+            maxlength="1000"
+            required
+          ></textarea>
+          <span class="char-count" id="char-count">0 / 1000</span>
+          <span class="field-error hidden" id="comment-error">Please write a review (minimum 20 characters).</span>
+        </div>
+
+        <!-- Institute Improvement -->
+        <div class="form-group">
+          <label for="institute-improvement">Suggestions for Institute Improvement <span class="optional">(optional)</span></label>
+          <p class="label-hint">Share any ideas to improve facilities, administration, environment, or overall student experience at Excellence Institute</p>
+          <textarea
+            id="institute-improvement"
+            rows="3"
+            placeholder="e.g. Better lab equipment, more library hours, improved canteen facilities..."
+            maxlength="1000"
+          ></textarea>
+          <span class="char-count" id="improvement-char-count">0 / 1000</span>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn btn-outline" onclick="cancelReview()">Cancel</button>
+          <button type="submit" class="btn btn-primary">Submit Review Anonymously</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Success -->
+    <section class="card success-card hidden" id="success-section">
+      <div class="success-content">
+        <div class="success-icon">✅</div>
+        <h2>Review Submitted!</h2>
+        <p>Thank you for helping improve teaching quality at Excellence Institute. Your feedback has been recorded anonymously.</p>
+        <button class="btn btn-primary" onclick="resetForm()">Submit Another Review</button>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="site-footer">
+    <p>© 2025 Excellence Institute · All reviews are anonymous and used solely to improve teaching quality.</p>
+  </footer>
+
+  <script src="student.js"></script>
+</body>
+</html>

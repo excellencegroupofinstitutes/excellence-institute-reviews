@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard — Excellence Institute</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ── Login Screen ── -->
+  <div class="login-overlay" id="login-overlay">
+    <div class="login-card">
+      <div class="logo centered">
+        <img src="logo.png" alt="Excellence Institute" class="logo-img logo-img-lg" />
+      </div>
+      <div class="login-inst-name">Excellence Institute</div>
+      <h2 class="login-title">Administrator Login</h2>
+      <form id="login-form" novalidate>
+        <div class="form-group">
+          <label for="admin-password">Password</label>
+          <input type="password" id="admin-password" placeholder="Enter admin password" autocomplete="current-password" />
+          <span class="field-error hidden" id="login-error">Incorrect password. Please try again.</span>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%">Login</button>
+      </form>
+      <p class="login-hint"><a href="index.html">← Back to Student Portal</a></p>
+    </div>
+  </div>
+
+  <!-- ── Dashboard ── -->
+  <div class="dashboard-wrap hidden" id="dashboard">
+
+    <header class="site-header">
+      <div class="header-inner">
+        <a class="logo" href="admin.html">
+          <img src="logo.png" alt="Excellence Institute" class="logo-img" />
+          <div class="logo-text">
+            <span class="logo-title">Excellence Institute</span>
+            <span class="logo-sub">Admin Dashboard</span>
+          </div>
+        </a>
+        <div class="header-actions">
+          <a href="index.html" target="_blank" class="btn btn-outline btn-sm">Student Portal ↗</a>
+          <button class="btn btn-outline btn-sm" onclick="adminLogout()">Logout</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="main-container wide">
+
+      <!-- Stats Bar -->
+      <div class="stats-bar">
+        <div class="stat-card">
+          <span class="stat-number" id="stat-sessions">0</span>
+          <span class="stat-label">Total Sessions</span>
+        </div>
+        <div class="stat-card stat-card-active">
+          <span class="stat-number" id="stat-active">0</span>
+          <span class="stat-label">Active Sessions</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-number" id="stat-faculties">0</span>
+          <span class="stat-label">Faculty Members</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-number" id="stat-reviews">0</span>
+          <span class="stat-label">Total Reviews</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-number" id="stat-avg">—</span>
+          <span class="stat-label">Avg Overall Rating</span>
+        </div>
+      </div>
+
+      <!-- Tab Nav -->
+      <div class="tab-nav">
+        <button class="tab-btn active" data-tab="sessions" onclick="switchTab('sessions')">📅 Sessions</button>
+        <button class="tab-btn" data-tab="faculty" onclick="switchTab('faculty')">👩‍🏫 Faculty</button>
+        <button class="tab-btn" data-tab="reviews" onclick="switchTab('reviews')">📝 All Reviews</button>
+      </div>
+
+      <!-- ══ TAB: SESSIONS ══ -->
+      <div class="tab-content" id="tab-sessions">
+        <div class="two-col">
+
+          <!-- Create Session -->
+          <div class="card">
+            <h2 class="section-title">Create New Session</h2>
+            <form id="create-session-form" novalidate>
+              <div class="form-group">
+                <label for="session-name">Session Name <span class="required">*</span></label>
+                <input type="text" id="session-name" placeholder="e.g. Term 1 Faculty Review 2025" maxlength="100" />
+                <span class="field-error hidden" id="sname-error">Please enter a session name.</span>
+              </div>
+              <div class="form-group">
+                <label for="session-faculty-select">Dedicate to Faculty <span class="optional">(optional)</span></label>
+                <select id="session-faculty-select">
+                  <option value="">— All Faculty (no restriction) —</option>
+                </select>
+                <p class="label-hint" style="margin-top:5px">If selected, students can only review this faculty in this session.</p>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="session-start">Start Date <span class="optional">(optional)</span></label>
+                  <input type="date" id="session-start" />
+                </div>
+                <div class="form-group">
+                  <label for="session-end">End Date <span class="optional">(optional)</span></label>
+                  <input type="date" id="session-end" />
+                </div>
+              </div>
+              <span class="field-error hidden" id="sdate-error">End date must be after start date.</span>
+              <button type="submit" class="btn btn-primary" style="width:100%">Create Session</button>
+            </form>
+          </div>
+
+          <!-- Active Sessions -->
+          <div>
+            <div class="card">
+              <h2 class="section-title">Active Sessions</h2>
+              <div id="active-sessions-list">
+                <p class="empty-msg">No active sessions.</p>
+              </div>
+            </div>
+
+            <div class="card" style="margin-top:0">
+              <h2 class="section-title">Ended Sessions</h2>
+              <div id="ended-sessions-list">
+                <p class="empty-msg">No ended sessions yet.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ TAB: FACULTY ══ -->
+      <div class="tab-content hidden" id="tab-faculty">
+        <div class="two-col">
+          <div class="card">
+            <h2 class="section-title">Add Faculty Member</h2>
+            <form id="add-faculty-form" novalidate>
+              <div class="form-group">
+                <label for="faculty-name">Full Name <span class="required">*</span></label>
+                <input type="text" id="faculty-name" placeholder="e.g. Dr. Amina Hassan" maxlength="80" />
+                <span class="field-error hidden" id="fname-error">Please enter a faculty name.</span>
+              </div>
+              <div class="form-group">
+                <label for="faculty-dept">Department / Subject <span class="optional">(optional)</span></label>
+                <input type="text" id="faculty-dept" placeholder="e.g. Mathematics" maxlength="80" />
+              </div>
+              <button type="submit" class="btn btn-primary">Add Faculty Member</button>
+            </form>
+          </div>
+
+          <div class="card">
+            <h2 class="section-title">Faculty List</h2>
+            <div id="faculty-list">
+              <p class="empty-msg">No faculty members added yet.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ TAB: REVIEWS ══ -->
+      <div class="tab-content hidden" id="tab-reviews">
+        <div class="card">
+          <div class="panel-header">
+            <h2 class="section-title" style="margin-bottom:0">All Reviews</h2>
+            <div class="filter-row">
+              <select id="filter-session"><option value="">All Sessions</option></select>
+              <select id="filter-faculty-rev"><option value="">All Faculty</option></select>
+              <select id="filter-class"><option value="">All Classes</option></select>
+              <select id="filter-sort">
+                <option value="newest">Newest First</option>
+                <option value="oldest">Oldest First</option>
+                <option value="highest">Highest Rated</option>
+                <option value="lowest">Lowest Rated</option>
+              </select>
+            </div>
+          </div>
+          <div id="reviews-list">
+            <p class="empty-msg">No reviews yet.</p>
+          </div>
+        </div>
+      </div>
+
+    </main>
+
+    <footer class="site-footer">
+      <p>© 2025 Excellence Institute · Admin Dashboard · Data stored locally in this browser.</p>
+    </footer>
+  </div>
+
+  <!-- Delete / End Confirm Modal -->
+  <div class="modal-overlay hidden" id="action-modal">
+    <div class="modal-card">
+      <h3 id="modal-title">Confirm Action</h3>
+      <p id="modal-msg"></p>
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-danger" id="modal-confirm-btn">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="admin.js"></script>
+</body>
+</html>
