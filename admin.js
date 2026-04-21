@@ -28,23 +28,44 @@ document.addEventListener('DOMContentLoaded', () => {
 /* ════════════════════════════════════════════
    FIRESTORE LISTENERS
 ════════════════════════════════════════════ */
+function showFirebaseError(msg) {
+  let banner = document.getElementById('firebase-error-banner');
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.id = 'firebase-error-banner';
+    banner.style.cssText = 'background:#fee2e2;color:#b91c1c;padding:12px 16px;font-size:14px;border-bottom:1px solid #fca5a5;text-align:center;';
+    document.body.prepend(banner);
+  }
+  banner.textContent = msg;
+  banner.style.display = 'block';
+}
+
 function initFirestoreListeners() {
-  db.collection('sessions').onSnapshot(snap => {
-    state.sessions = snap.docs.map(d => d.data());
-    if (isLoggedIn()) renderAll();
-  });
-  db.collection('faculties').onSnapshot(snap => {
-    state.faculties = snap.docs.map(d => d.data());
-    if (isLoggedIn()) renderAll();
-  });
-  db.collection('reviews').onSnapshot(snap => {
-    state.reviews = snap.docs.map(d => d.data());
-    if (isLoggedIn()) {
-      renderStats();
-      populateReviewFilters();
-      if (activeTab === 'reviews') renderReviews();
-    }
-  });
+  db.collection('sessions').onSnapshot(
+    snap => {
+      state.sessions = snap.docs.map(d => d.data());
+      if (isLoggedIn()) renderAll();
+    },
+    err => showFirebaseError('Firestore error (sessions): ' + err.message)
+  );
+  db.collection('faculties').onSnapshot(
+    snap => {
+      state.faculties = snap.docs.map(d => d.data());
+      if (isLoggedIn()) renderAll();
+    },
+    err => showFirebaseError('Firestore error (faculties): ' + err.message)
+  );
+  db.collection('reviews').onSnapshot(
+    snap => {
+      state.reviews = snap.docs.map(d => d.data());
+      if (isLoggedIn()) {
+        renderStats();
+        populateReviewFilters();
+        if (activeTab === 'reviews') renderReviews();
+      }
+    },
+    err => showFirebaseError('Firestore error (reviews): ' + err.message)
+  );
 }
 
 /* ════════════════════════════════════════════
@@ -156,8 +177,12 @@ async function createSession(e) {
     actualEndDate: null,
   };
 
-  await db.collection('sessions').doc(session.id).set(session);
-  document.getElementById('create-session-form').reset();
+  try {
+    await db.collection('sessions').doc(session.id).set(session);
+    document.getElementById('create-session-form').reset();
+  } catch (err) {
+    showFirebaseError('Failed to create session: ' + err.message);
+  }
 }
 
 function endSession(id) {
@@ -300,8 +325,12 @@ async function addFaculty(e) {
   if (!valid) return;
 
   const faculty = { id: crypto.randomUUID(), name, department: dept, addedDate: new Date().toISOString() };
-  await db.collection('faculties').doc(faculty.id).set(faculty);
-  document.getElementById('add-faculty-form').reset();
+  try {
+    await db.collection('faculties').doc(faculty.id).set(faculty);
+    document.getElementById('add-faculty-form').reset();
+  } catch (err) {
+    showFirebaseError('Failed to add faculty: ' + err.message);
+  }
 }
 
 function renderFacultyList() {
