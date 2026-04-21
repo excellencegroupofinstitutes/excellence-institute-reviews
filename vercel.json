@@ -1,0 +1,7 @@
+{
+  "rewrites": [
+    { "source": "/system/review/admin", "destination": "/admin.html" },
+    { "source": "/system/review",       "destination": "/index.html" },
+    { "source": "/system/(.*)",          "destination": "/$1" }
+  ]
+}
