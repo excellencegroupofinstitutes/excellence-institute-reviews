@@ -1,27 +1,14 @@
 /* ── Student Portal Logic ── */
 
-const FACULTIES_KEY = 'ei_faculties';
-const REVIEWS_KEY   = 'ei_reviews';
-const SESSIONS_KEY  = 'ei_sessions';
-
 const STAR_LABELS = ['', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent'];
 let ratings = { style: 0, methods: 0 };
-let activeSessionId   = null;  // currently selected session
-let dedicatedFacultyId = null; // if session locks a faculty
+let activeSessionId    = null;
+let dedicatedFacultyId = null;
+let state = { sessions: [], faculties: [] };
 
 /* ── Bootstrap ── */
 document.addEventListener('DOMContentLoaded', () => {
-  const activeSessions = getActiveSessions();
-
-  if (activeSessions.length === 0) {
-    showSection('no-session-section');
-    document.getElementById('start-btn').disabled = true;
-    document.getElementById('start-btn').textContent = 'No Active Sessions';
-    return;
-  }
-
-  populateFacultyDropdown();
-  populateSessionDropdown(activeSessions);
+  initFirestoreListeners();
 
   document.getElementById('review-form').addEventListener('submit', submitReview);
   document.getElementById('review-comment').addEventListener('input', function () {
@@ -36,10 +23,36 @@ document.addEventListener('DOMContentLoaded', () => {
   initStars('methods-stars', 'methods-label', 'methods');
 });
 
+/* ── Firestore Listeners ── */
+function initFirestoreListeners() {
+  db.collection('sessions').onSnapshot(snap => {
+    state.sessions = snap.docs.map(d => d.data());
+    updateStudentUI();
+  });
+  db.collection('faculties').onSnapshot(snap => {
+    state.faculties = snap.docs.map(d => d.data()).sort((a, b) => a.name.localeCompare(b.name));
+    populateFacultyDropdown();
+  });
+}
+
+function updateStudentUI() {
+  const activeSessions = getActiveSessions();
+
+  if (activeSessions.length === 0) {
+    showSection('no-session-section');
+    document.getElementById('start-btn').disabled = true;
+    document.getElementById('start-btn').textContent = 'No Active Sessions';
+    return;
+  }
+
+  document.getElementById('start-btn').disabled = false;
+  document.getElementById('start-btn').textContent = 'Write a Review';
+  populateSessionDropdown(activeSessions);
+}
+
 /* ── Session Helpers ── */
-function getSessions()  { return JSON.parse(localStorage.getItem(SESSIONS_KEY) || '[]'); }
-function getFaculties() { return JSON.parse(localStorage.getItem(FACULTIES_KEY) || '[]'); }
-function getReviews()   { return JSON.parse(localStorage.getItem(REVIEWS_KEY)   || '[]'); }
+function getSessions()  { return state.sessions; }
+function getFaculties() { return state.faculties; }
 
 function isSessionActive(s) {
   if (s.status === 'ended') return false;
@@ -77,7 +90,6 @@ function populateSessionDropdown(sessions) {
 
   const group = document.getElementById('session-group');
   if (sessions.length === 1) {
-    // Auto-select single session, hide the dropdown
     sel.value = sessions[0].id;
     group.classList.add('hidden');
     onSessionChange();
@@ -85,7 +97,7 @@ function populateSessionDropdown(sessions) {
 }
 
 function populateFacultyDropdown(preselectedId) {
-  const faculties = getFaculties().slice().sort((a, b) => a.name.localeCompare(b.name));
+  const faculties = getFaculties();
   const sel = document.getElementById('faculty-select');
   sel.innerHTML = '<option value="">— Choose a faculty member —</option>';
   faculties.forEach(f => {
@@ -106,8 +118,8 @@ function onSessionChange() {
   activeSessionId    = sid || null;
   dedicatedFacultyId = null;
 
-  const banner      = document.getElementById('session-banner');
-  const facultyGrp  = document.getElementById('faculty-group');
+  const banner     = document.getElementById('session-banner');
+  const facultyGrp = document.getElementById('faculty-group');
 
   if (!session) {
     banner.classList.add('hidden');
@@ -116,7 +128,6 @@ function onSessionChange() {
   }
 
   if (session.facultyId) {
-    // Session is dedicated to a specific faculty
     dedicatedFacultyId = session.facultyId;
     const faculty = getFaculties().find(f => f.id === session.facultyId);
     const facultyName = faculty ? `${faculty.name} — ${faculty.department}` : 'Unknown Faculty';
@@ -177,27 +188,29 @@ function showSection(id) {
 }
 
 /* ── Submit ── */
-function submitReview(e) {
+async function submitReview(e) {
   e.preventDefault();
   if (!validateForm()) return;
+
+  const submitBtn = e.target.querySelector('[type="submit"]');
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Submitting…';
 
   const facultyId = dedicatedFacultyId || document.getElementById('faculty-select').value;
 
   const review = {
-    id:             crypto.randomUUID(),
-    sessionId:      activeSessionId,
+    id:            crypto.randomUUID(),
+    sessionId:     activeSessionId,
     facultyId,
-    class:          document.getElementById('class-select').value,
-    styleRating:    ratings.style,
-    methodsRating:  ratings.methods,
-    comment:        document.getElementById('review-comment').value.trim(),
-    improvement:    document.getElementById('institute-improvement').value.trim() || null,
-    date:           new Date().toISOString(),
+    class:         document.getElementById('class-select').value,
+    styleRating:   ratings.style,
+    methodsRating: ratings.methods,
+    comment:       document.getElementById('review-comment').value.trim(),
+    improvement:   document.getElementById('institute-improvement').value.trim() || null,
+    date:          new Date().toISOString(),
   };
 
-  const reviews = getReviews();
-  reviews.push(review);
-  localStorage.setItem(REVIEWS_KEY, JSON.stringify(reviews));
+  await db.collection('reviews').doc(review.id).set(review);
 
   showSection('success-section');
   window.scrollTo({ top: 0, behavior: 'smooth' });

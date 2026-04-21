@@ -1,19 +1,18 @@
 /* ── Admin Dashboard Logic ── */
 
-const FACULTIES_KEY  = 'ei_faculties';
-const REVIEWS_KEY    = 'ei_reviews';
-const SESSIONS_KEY   = 'ei_sessions';
 const SESSION_AUTH   = 'ei_admin_session';
-const ADMIN_PASSWORD = 'Excellence@2024';  // Change to your preferred password
+const ADMIN_PASSWORD = 'Excellence@2024';
 
-let modalAction = null;           // callback for confirm modal
-let expandedSessions = new Set(); // track which session cards are expanded
+let state          = { sessions: [], faculties: [], reviews: [] };
+let modalAction    = null;
+let expandedSessions = new Set();
+let activeTab      = 'sessions';
 
 /* ════════════════════════════════════════════
    BOOTSTRAP
 ════════════════════════════════════════════ */
 document.addEventListener('DOMContentLoaded', () => {
-  if (isLoggedIn()) showDashboard();
+  initFirestoreListeners();
 
   document.getElementById('login-form').addEventListener('submit', handleLogin);
   document.getElementById('create-session-form').addEventListener('submit', createSession);
@@ -22,7 +21,31 @@ document.addEventListener('DOMContentLoaded', () => {
   ['filter-session', 'filter-faculty-rev', 'filter-class', 'filter-sort'].forEach(id => {
     document.getElementById(id).addEventListener('change', renderReviews);
   });
+
+  if (isLoggedIn()) showDashboard();
 });
+
+/* ════════════════════════════════════════════
+   FIRESTORE LISTENERS
+════════════════════════════════════════════ */
+function initFirestoreListeners() {
+  db.collection('sessions').onSnapshot(snap => {
+    state.sessions = snap.docs.map(d => d.data());
+    if (isLoggedIn()) renderAll();
+  });
+  db.collection('faculties').onSnapshot(snap => {
+    state.faculties = snap.docs.map(d => d.data());
+    if (isLoggedIn()) renderAll();
+  });
+  db.collection('reviews').onSnapshot(snap => {
+    state.reviews = snap.docs.map(d => d.data());
+    if (isLoggedIn()) {
+      renderStats();
+      populateReviewFilters();
+      if (activeTab === 'reviews') renderReviews();
+    }
+  });
+}
 
 /* ════════════════════════════════════════════
    AUTH
@@ -59,6 +82,7 @@ function showDashboard() {
    TABS
 ════════════════════════════════════════════ */
 function switchTab(name) {
+  activeTab = name;
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
   document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
   document.getElementById(`tab-${name}`).classList.remove('hidden');
@@ -101,7 +125,7 @@ function renderStats() {
 /* ════════════════════════════════════════════
    SESSIONS
 ════════════════════════════════════════════ */
-function createSession(e) {
+async function createSession(e) {
   e.preventDefault();
   let valid = true;
 
@@ -122,35 +146,25 @@ function createSession(e) {
   if (!valid) return;
 
   const session = {
-    id:          crypto.randomUUID(),
+    id:            crypto.randomUUID(),
     name,
     facultyId,
     startDate,
     endDate,
-    status:      'active',
-    createdDate: new Date().toISOString(),
+    status:        'active',
+    createdDate:   new Date().toISOString(),
     actualEndDate: null,
   };
 
-  const sessions = getSessions();
-  sessions.push(session);
-  saveSessions(sessions);
-
+  await db.collection('sessions').doc(session.id).set(session);
   document.getElementById('create-session-form').reset();
-  renderAll();
 }
 
 function endSession(id) {
   openModal(
     'End Session',
     'Are you sure you want to end this session? Students will no longer be able to submit reviews for it.',
-    () => {
-      const sessions = getSessions().map(s =>
-        s.id === id ? { ...s, status: 'ended', actualEndDate: new Date().toISOString() } : s
-      );
-      saveSessions(sessions);
-      renderAll();
-    },
+    () => db.collection('sessions').doc(id).update({ status: 'ended', actualEndDate: new Date().toISOString() }),
     'End Session',
     'btn-end'
   );
@@ -160,11 +174,13 @@ function deleteSession(id, name) {
   openModal(
     'Delete Session',
     `Delete session "<strong>${escHtml(name)}</strong>"? All reviews in this session will also be permanently removed.`,
-    () => {
-      saveSessions(getSessions().filter(s => s.id !== id));
-      saveReviews(getReviews().filter(r => r.sessionId !== id));
+    async () => {
+      const batch = db.batch();
+      batch.delete(db.collection('sessions').doc(id));
+      const reviewsSnap = await db.collection('reviews').where('sessionId', '==', id).get();
+      reviewsSnap.docs.forEach(d => batch.delete(d.ref));
+      await batch.commit();
       expandedSessions.delete(id);
-      renderAll();
     },
     'Delete Permanently',
     'btn-danger'
@@ -273,7 +289,7 @@ function buildReviewsMini(reviews, facMap) {
 /* ════════════════════════════════════════════
    FACULTY
 ════════════════════════════════════════════ */
-function addFaculty(e) {
+async function addFaculty(e) {
   e.preventDefault();
   let valid = true;
   const name = document.getElementById('faculty-name').value.trim();
@@ -283,11 +299,9 @@ function addFaculty(e) {
   else         clearFErr('faculty-name', 'fname-error');
   if (!valid) return;
 
-  const faculties = getFaculties();
-  faculties.push({ id: crypto.randomUUID(), name, department: dept, addedDate: new Date().toISOString() });
-  saveFaculties(faculties);
+  const faculty = { id: crypto.randomUUID(), name, department: dept, addedDate: new Date().toISOString() };
+  await db.collection('faculties').doc(faculty.id).set(faculty);
   document.getElementById('add-faculty-form').reset();
-  renderAll();
 }
 
 function renderFacultyList() {
@@ -318,10 +332,12 @@ function deleteFaculty(id, name) {
   openModal(
     'Delete Faculty',
     `Remove "<strong>${escHtml(name)}</strong>"? All their reviews will also be permanently deleted.`,
-    () => {
-      saveFaculties(getFaculties().filter(f => f.id !== id));
-      saveReviews(getReviews().filter(r => r.facultyId !== id));
-      renderAll();
+    async () => {
+      const batch = db.batch();
+      batch.delete(db.collection('faculties').doc(id));
+      const reviewsSnap = await db.collection('reviews').where('facultyId', '==', id).get();
+      reviewsSnap.docs.forEach(d => batch.delete(d.ref));
+      await batch.commit();
     }
   );
 }
@@ -356,7 +372,6 @@ function populateReviewFilters() {
   });
   if (prevFac) selFac.value = prevFac;
 
-  // Populate class filter with classes that actually appear in reviews
   const selClass = document.getElementById('filter-class');
   const prevClass = selClass.value;
   const usedClasses = [...new Set(reviews.map(r => r.class).filter(Boolean))].sort();
@@ -458,7 +473,7 @@ function openModal(title, msg, action, btnLabel = 'Delete', btnClass = 'btn-dang
   const btn = document.getElementById('modal-confirm-btn');
   btn.textContent = btnLabel;
   btn.className   = `btn ${btnClass}`;
-  btn.onclick     = () => { modalAction && modalAction(); closeModal(); };
+  btn.onclick     = () => { closeModal(); modalAction && modalAction(); };
   document.getElementById('action-modal').classList.remove('hidden');
 }
 function closeModal() {
@@ -492,13 +507,11 @@ function fmtDateStr(dateStr) {
   const [y, m, d] = dateStr.split('-');
   return new Date(y, m - 1, d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 }
-
 function escHtml(str) {
   return String(str)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
-
 function showFErr(inputId, errId) {
   document.getElementById(inputId).classList.add('invalid');
   document.getElementById(errId).classList.remove('hidden');
@@ -508,10 +521,7 @@ function clearFErr(inputId, errId) {
   document.getElementById(errId).classList.add('hidden');
 }
 
-/* ── Storage ── */
-function getSessions()  { return JSON.parse(localStorage.getItem(SESSIONS_KEY)  || '[]'); }
-function getFaculties() { return JSON.parse(localStorage.getItem(FACULTIES_KEY) || '[]'); }
-function getReviews()   { return JSON.parse(localStorage.getItem(REVIEWS_KEY)   || '[]'); }
-function saveSessions(d)  { localStorage.setItem(SESSIONS_KEY,  JSON.stringify(d)); }
-function saveFaculties(d) { localStorage.setItem(FACULTIES_KEY, JSON.stringify(d)); }
-function saveReviews(d)   { localStorage.setItem(REVIEWS_KEY,   JSON.stringify(d)); }
+/* ── State accessors (read from Firestore-synced state) ── */
+function getSessions()  { return state.sessions; }
+function getFaculties() { return state.faculties; }
+function getReviews()   { return state.reviews; }
