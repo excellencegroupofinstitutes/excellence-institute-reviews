@@ -1,6 +1,10 @@
 /* ── Student Portal Logic ── */
 
 const STAR_LABELS = ['', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent'];
+const MIN_TIME_ON_PAGE_MS = 3000;
+const SUBMIT_COOLDOWN_MS  = 60_000;
+const COOLDOWN_KEY        = 'eg_last_review_submitted_at';
+const pageLoadedAt        = Date.now();
 let ratings = { style: 0, methods: 0 };
 let activeSessionId    = null;
 let dedicatedFacultyId = null;
@@ -190,6 +194,20 @@ function showSection(id) {
 /* ── Submit ── */
 async function submitReview(e) {
   e.preventDefault();
+
+  // Honeypot — real users never fill this.
+  if (document.getElementById('hp-website')?.value) return;
+
+  // Time-on-page guard — bots fire submit within milliseconds.
+  if (Date.now() - pageLoadedAt < MIN_TIME_ON_PAGE_MS) return;
+
+  // Per-browser cooldown — prevents rapid repeat submissions.
+  const lastAt = parseInt(localStorage.getItem(COOLDOWN_KEY) || '0', 10);
+  if (lastAt && Date.now() - lastAt < SUBMIT_COOLDOWN_MS) {
+    alert('You just submitted a review. Please wait a minute before submitting another.');
+    return;
+  }
+
   if (!validateForm()) return;
 
   const submitBtn = e.target.querySelector('[type="submit"]');
@@ -211,6 +229,8 @@ async function submitReview(e) {
   };
 
   await db.collection('reviews').doc(review.id).set(review);
+
+  localStorage.setItem(COOLDOWN_KEY, String(Date.now()));
 
   showSection('success-section');
   window.scrollTo({ top: 0, behavior: 'smooth' });
